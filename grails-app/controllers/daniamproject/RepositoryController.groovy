@@ -21,9 +21,9 @@ class RepositoryController {
         [repository: repository, productList: Product.list(), repositoryList: Repository.list() - repository]
     }
 
-    def create() {
-        [repository: new Repository(params)]
-    }
+//    def create() {
+//        [repository: new Repository(params)]
+//    }
 
     def save() {
         def existingRepository = Repository.findByName(params.name)
@@ -117,7 +117,7 @@ class RepositoryController {
         def product = Product.get(params.productId)
         if (sourceRepository && targetRepository && product) {
             def sourceProduct = sourceRepository.products.find { it.product.id == product.id }
-            if (sourceProduct) {
+            if (sourceProduct && sourceProduct.quantity >= params.int('quantity')) {
                 def targetProduct = targetRepository.products.find { it.product.id == product.id }
                 if (targetProduct) {
                     targetProduct.quantity += params.int('quantity')
@@ -126,15 +126,22 @@ class RepositoryController {
                     def newProduct = new RepositoryProduct(product: product, quantity: params.int('quantity'))
                     targetRepository.addToProducts(newProduct)
                 }
-                if (sourceProduct.quantity > params.int('quantity')) {
-                    sourceProduct.quantity -= params.int('quantity')
-                    sourceProduct.save(flush: true)
-                } else {
+                sourceProduct.quantity -= params.int('quantity')
+                if (sourceProduct.quantity == 0) {
                     sourceRepository.removeFromProducts(sourceProduct)
                     sourceProduct.delete(flush: true)
                 }
-                sourceRepository.save(flush: true)
+                sourceProduct.save(flush: true)
                 targetRepository.save(flush: true)
+//                if (sourceProduct.quantity > params.int('quantity')) {
+//                    sourceProduct.quantity -= params.int('quantity')
+//                    sourceProduct.save(flush: true)
+//                } else {
+//                    sourceRepository.removeFromProducts(sourceProduct)
+//                    sourceProduct.delete(flush: true)
+//                }
+//                sourceRepository.save(flush: true)
+//                targetRepository.save(flush: true)
             }
         }
         redirect(action: "show", id: params.sourceRepositoryId)
